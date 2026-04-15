@@ -43,6 +43,7 @@ app.post('/api/test-email', async (req, res) => {
 });
 
 const PORT = 5000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📱 Phone access: http://10.12.34.23:${PORT}`);
 });

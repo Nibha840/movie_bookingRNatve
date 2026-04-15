@@ -1,8 +1,15 @@
 // src/services/api.js
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
-const BASE_URL = 'http://localhost:5000';
+// Phone se localhost nahi chalega, laptop ka IP use karo
+// Apna IP yahan dalo (ipconfig se check karo)
+const LAPTOP_IP = '10.12.34.23';
+
+const BASE_URL = Platform.OS === 'web'
+  ? 'http://localhost:5000'
+  : `http://${LAPTOP_IP}:5000`;
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
