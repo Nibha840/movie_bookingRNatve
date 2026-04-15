@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ScrollView,
   StatusBar,
 } from 'react-native';
@@ -13,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components';
 import { COLORS, FONTS, SPACING, RADIUS } from '../utils/theme';
+import { showConfirm } from '../utils/helpers';
 
 const MenuItem = ({ icon, label, value, onPress, danger = false }) => (
   <TouchableOpacity
@@ -35,14 +35,7 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
 
   const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: signOut,
-      },
-    ]);
+    showConfirm('Sign Out', 'Are you sure you want to sign out?', signOut);
   };
 
   const initials = user?.name

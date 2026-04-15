@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
@@ -16,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { login } from '../services/api';
 import { Button, Input } from '../components';
 import { COLORS, FONTS, SPACING, RADIUS } from '../utils/theme';
+import { showAlert } from '../utils/helpers';
 
 export default function LoginScreen({ navigation }) {
   const { signIn } = useAuth();
@@ -45,7 +45,7 @@ export default function LoginScreen({ navigation }) {
       const name = data.name || data.user?.name || '';
       await signIn({ token, userId: String(userId), role, email, name });
     } catch (error) {
-      Alert.alert('Login Failed', error.message);
+      showAlert('Login Failed', error.message);
     } finally {
       setLoading(false);
     }

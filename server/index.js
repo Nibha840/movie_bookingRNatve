@@ -7,6 +7,7 @@ const authRoutes = require('./routes/authRoutes');
 const movieRoutes = require('./routes/movieRoutes');
 const bookingRoutes = require('./routes/bookingRoutes'); 
 const paymentRoutes = require('./routes/paymentRoutes'); 
+const sendEmail = require('./utils/emailService');
 
 const app = express();
 
@@ -23,8 +24,25 @@ app.use('/api/movies', movieRoutes);
 app.use('/api/bookings', bookingRoutes); 
 app.use('/api/payment', paymentRoutes); 
 
+// Test email endpoint - hit this to verify email is working
+app.post('/api/test-email', async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    
+    const success = await sendEmail(
+        email,
+        'Test Email from Movie App ✅',
+        'If you received this email, your email service is working correctly!\n\n- Movie App Team'
+    );
+    
+    if (success) {
+        res.json({ message: `Test email sent to ${email}` });
+    } else {
+        res.status(500).json({ error: 'Failed to send email. Check server logs.' });
+    }
+});
+
 const PORT = 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
-

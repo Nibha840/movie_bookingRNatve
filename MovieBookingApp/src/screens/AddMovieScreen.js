@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   StatusBar,
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { addMovie } from '../services/api';
 import { Button, Input } from '../components';
 import { COLORS, FONTS, SPACING, RADIUS } from '../utils/theme';
+import { showAlert } from '../utils/helpers';
 
 const GENRES = [
   'Action', 'Comedy', 'Drama', 'Horror',
@@ -46,7 +46,7 @@ export default function AddMovieScreen({ navigation, route }) {
     setLoading(true);
     try {
       await addMovie(form);
-      Alert.alert('Movie Added! 🎬', `"${form.title}" has been added to the catalog.`, [
+      showAlert('Movie Added! 🎬', `"${form.title}" has been added to the catalog.`, [
         {
           text: 'Done',
           onPress: () => {
@@ -56,7 +56,7 @@ export default function AddMovieScreen({ navigation, route }) {
         },
       ]);
     } catch (error) {
-      Alert.alert('Failed to Add Movie', error.message);
+      showAlert('Failed to Add Movie', error.message);
     } finally {
       setLoading(false);
     }

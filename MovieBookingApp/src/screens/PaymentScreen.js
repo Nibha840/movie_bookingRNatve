@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   ScrollView,
   StatusBar,
 } from 'react-native';
@@ -14,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { processPayment } from '../services/api';
 import { Button, Input } from '../components';
 import { COLORS, FONTS, SPACING, RADIUS } from '../utils/theme';
-import { formatCurrency, generateTransactionId } from '../utils/helpers';
+import { formatCurrency, generateTransactionId, showAlert } from '../utils/helpers';
 
 const UPI_APPS = [
   { name: 'GPay', emoji: '💳', hint: 'example@gpay' },
@@ -60,7 +59,7 @@ export default function PaymentScreen({ navigation, route }) {
         upiId,
       });
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'Payment Failed ❌',
         error.message || 'Transaction could not be processed. Please try again.',
         [{ text: 'Retry', style: 'destructive' }, { text: 'Cancel', onPress: () => navigation.goBack() }]

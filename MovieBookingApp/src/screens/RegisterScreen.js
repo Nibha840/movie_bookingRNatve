@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
@@ -15,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { register } from '../services/api';
 import { Button, Input } from '../components';
 import { COLORS, FONTS, SPACING, RADIUS } from '../utils/theme';
+import { showAlert } from '../utils/helpers';
 
 export default function RegisterScreen({ navigation }) {
   const [form, setForm] = useState({
@@ -50,11 +50,11 @@ export default function RegisterScreen({ navigation }) {
         password: form.password,
         role: form.role,
       });
-      Alert.alert('Account Created! 🎉', 'Please login to continue.', [
+      showAlert('Account Created! 🎉', 'Please login to continue.', [
         { text: 'Login', onPress: () => navigation.replace('Login') },
       ]);
     } catch (error) {
-      Alert.alert('Registration Failed', error.message);
+      showAlert('Registration Failed', error.message);
     } finally {
       setLoading(false);
     }

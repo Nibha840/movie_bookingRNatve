@@ -7,13 +7,13 @@ import {
   TouchableOpacity,
   FlatList,
   StatusBar,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { getMovies } from '../services/api';
 import { LoadingScreen, Button } from '../components';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
+import { showAlert, showConfirm } from '../utils/helpers';
 
 export default function AdminDashboardScreen({ navigation }) {
   const { user, signOut } = useAuth();
@@ -30,17 +30,14 @@ export default function AdminDashboardScreen({ navigation }) {
       const data = await getMovies();
       setMovies(Array.isArray(data) ? data : data.movies || []);
     } catch (err) {
-      Alert.alert('Error', err.message);
+      showAlert('Error', err.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: signOut },
-    ]);
+    showConfirm('Sign Out', 'Are you sure?', signOut);
   };
 
   if (loading) return <LoadingScreen message="Loading admin panel..." />;
