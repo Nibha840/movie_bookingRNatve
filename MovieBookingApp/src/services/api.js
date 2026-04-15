@@ -80,9 +80,37 @@ export const addMovie = async ({ title, description, poster_url, genre }) => {
   return response.data;
 };
 
-// ─── PAYMENT ─────────────────────────────────────────────────────────────────
-export const processPayment = async ({ upiId, amount }) => {
-  const response = await apiClient.post('/api/payment/process', { upiId, amount });
+export const updateMovie = async (id, { title, description, poster_url, genre }) => {
+  const response = await apiClient.put(`/api/movies/${id}`, {
+    title,
+    description,
+    poster_url,
+    genre,
+  });
+  return response.data;
+};
+
+// ─── RAZORPAY PAYMENT ────────────────────────────────────────────────────────
+
+// Get Razorpay public key from backend
+export const getRazorpayKey = async () => {
+  const response = await apiClient.get('/api/payment/key');
+  return response.data;
+};
+
+// Create a Razorpay order on backend
+export const createRazorpayOrder = async ({ amount }) => {
+  const response = await apiClient.post('/api/payment/create-order', { amount });
+  return response.data;
+};
+
+// Verify payment after Razorpay checkout
+export const verifyRazorpayPayment = async ({ razorpay_order_id, razorpay_payment_id, razorpay_signature }) => {
+  const response = await apiClient.post('/api/payment/verify', {
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+  });
   return response.data;
 };
 

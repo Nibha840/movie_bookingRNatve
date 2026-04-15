@@ -58,7 +58,10 @@ export default function AdminDashboardScreen({ navigation }) {
           <Text style={styles.movieItemGenre}>{item.genre || 'N/A'}</Text>
         </View>
       </View>
-      <TouchableOpacity style={styles.editBtn}>
+      <TouchableOpacity
+        style={styles.editBtn}
+        onPress={() => navigation.navigate('AddMovie', { movie: item, onSuccess: fetchMovies })}
+      >
         <Text style={styles.editBtnText}>Edit</Text>
       </TouchableOpacity>
     </View>

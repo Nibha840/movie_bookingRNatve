@@ -58,4 +58,27 @@ exports.createMovie = (req, res) => {
         }
         res.status(201).json({ message: "Movie added successfully!", movieId: result.insertId });
     });
+};
+
+// UPDATE A MOVIE (Admin Only)
+exports.updateMovie = (req, res) => {
+    const { id } = req.params;
+    const { title, description, poster_url, genre } = req.body;
+
+    if (!title) {
+        return res.status(400).json({ error: "Movie title is required" });
+    }
+
+    const sql = "UPDATE movies SET title = ?, description = ?, poster_url = ?, genre = ? WHERE id = ?";
+
+    db.query(sql, [title, description || '', poster_url || '', genre || 'General', id], (err, result) => {
+        if (err) {
+            console.error('❌ Update Movie Error:', err.message);
+            return res.status(500).json({ error: "Database error: " + err.message });
+        }
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Movie not found" });
+        }
+        res.json({ message: "Movie updated successfully!" });
+    });
 };

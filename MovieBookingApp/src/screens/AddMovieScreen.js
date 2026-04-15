@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { addMovie } from '../services/api';
+import { addMovie, updateMovie } from '../services/api';
 import { Button, Input } from '../components';
 import { COLORS, FONTS, SPACING, RADIUS } from '../utils/theme';
 import { showAlert } from '../utils/helpers';
@@ -23,11 +23,14 @@ const GENRES = [
 
 export default function AddMovieScreen({ navigation, route }) {
   const onSuccess = route.params?.onSuccess;
+  const editMovie = route.params?.movie; // If editing, this will have movie data
+  const isEditing = !!editMovie;
+
   const [form, setForm] = useState({
-    title: '',
-    description: '',
-    poster_url: '',
-    genre: '',
+    title: editMovie?.title || '',
+    description: editMovie?.description || '',
+    poster_url: editMovie?.poster_url || '',
+    genre: editMovie?.genre || '',
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -41,22 +44,35 @@ export default function AddMovieScreen({ navigation, route }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleAdd = async () => {
+  const handleSubmit = async () => {
     if (!validate()) return;
     setLoading(true);
     try {
-      await addMovie(form);
-      showAlert('Movie Added! 🎬', `"${form.title}" has been added to the catalog.`, [
-        {
-          text: 'Done',
-          onPress: () => {
-            onSuccess?.();
-            navigation.goBack();
+      if (isEditing) {
+        await updateMovie(editMovie.id || editMovie._id, form);
+        showAlert('Movie Updated! ✅', `"${form.title}" has been updated.`, [
+          {
+            text: 'Done',
+            onPress: () => {
+              onSuccess?.();
+              navigation.goBack();
+            },
           },
-        },
-      ]);
+        ]);
+      } else {
+        await addMovie(form);
+        showAlert('Movie Added! 🎬', `"${form.title}" has been added to the catalog.`, [
+          {
+            text: 'Done',
+            onPress: () => {
+              onSuccess?.();
+              navigation.goBack();
+            },
+          },
+        ]);
+      }
     } catch (error) {
-      showAlert('Failed to Add Movie', error.message);
+      showAlert(isEditing ? 'Failed to Update' : 'Failed to Add Movie', error.message);
     } finally {
       setLoading(false);
     }
@@ -71,7 +87,7 @@ export default function AddMovieScreen({ navigation, route }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backBtnText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add New Movie</Text>
+        <Text style={styles.headerTitle}>{isEditing ? 'Edit Movie' : 'Add New Movie'}</Text>
         <View style={{ width: 38 }} />
       </View>
 
@@ -157,8 +173,8 @@ export default function AddMovieScreen({ navigation, route }) {
           </View>
 
           <Button
-            title="🎬  Add Movie"
-            onPress={handleAdd}
+            title={isEditing ? '✅  Update Movie' : '🎬  Add Movie'}
+            onPress={handleSubmit}
             loading={loading}
             style={styles.addBtn}
           />

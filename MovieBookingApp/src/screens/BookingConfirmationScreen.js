@@ -16,7 +16,7 @@ import { COLORS, FONTS, SPACING, RADIUS } from '../utils/theme';
 import { formatCurrency, formatDate } from '../utils/helpers';
 
 export default function BookingConfirmationScreen({ navigation, route }) {
-  const { movie, seats, totalPrice, transactionId, upiId } = route.params;
+  const { movie, seats, totalPrice, transactionId, paymentMethod } = route.params;
   const { user } = useAuth();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -147,10 +147,10 @@ export default function BookingConfirmationScreen({ navigation, route }) {
           </View>
         </View>
 
-        {/* UPI Info */}
+        {/* Payment Info */}
         <View style={styles.upiInfo}>
-          <Text style={styles.upiInfoLabel}>💳 Paid Via UPI</Text>
-          <Text style={styles.upiInfoValue}>{upiId}</Text>
+          <Text style={styles.upiInfoLabel}>💳 Paid Via</Text>
+          <Text style={styles.upiInfoValue}>{paymentMethod || 'Razorpay'}</Text>
         </View>
 
         {/* Actions */}

@@ -8,65 +8,108 @@ import {
   ActivityIndicator,
   ScrollView,
   StatusBar,
+  Modal,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { processPayment } from '../services/api';
-import { Button, Input } from '../components';
+import { createRazorpayOrder, verifyRazorpayPayment } from '../services/api';
+import RazorpayCheckout from '../components/RazorpayCheckout';
+import { Button } from '../components';
 import { COLORS, FONTS, SPACING, RADIUS } from '../utils/theme';
-import { formatCurrency, generateTransactionId, showAlert } from '../utils/helpers';
-
-const UPI_APPS = [
-  { name: 'GPay', emoji: '💳', hint: 'example@gpay' },
-  { name: 'PhonePe', emoji: '📱', hint: 'example@phonepe' },
-  { name: 'Paytm', emoji: '💰', hint: 'example@paytm' },
-  { name: 'BHIM', emoji: '🏦', hint: 'example@upi' },
-];
+import { formatCurrency, showAlert } from '../utils/helpers';
 
 export default function PaymentScreen({ navigation, route }) {
   const { movie, seats, totalPrice } = route.params;
-  const [upiId, setUpiId] = useState('');
-  const [upiError, setUpiError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedApp, setSelectedApp] = useState(null);
+  const [showRazorpay, setShowRazorpay] = useState(false);
+  const [orderData, setOrderData] = useState(null);
 
-  const validateUpi = () => {
-    if (!upiId.trim()) {
-      setUpiError('UPI ID is required');
-      return false;
-    }
-    if (!upiId.includes('@')) {
-      setUpiError('Enter a valid UPI ID (e.g., name@upi)');
-      return false;
-    }
-    setUpiError('');
-    return true;
-  };
-
+  // Step 1: Create order on backend, then open Razorpay checkout
   const handlePay = async () => {
-    if (!validateUpi()) return;
     setLoading(true);
-
     try {
-      // Simulate 2 second payment processing
-      await new Promise((res) => setTimeout(res, 2000));
-      const data = await processPayment({ upiId, amount: totalPrice });
-      const transactionId = data?.transactionId || generateTransactionId();
-      navigation.replace('BookingConfirmation', {
-        movie,
-        seats,
-        totalPrice,
-        transactionId,
-        upiId,
-      });
+      // Create Razorpay order from our backend
+      const data = await createRazorpayOrder({ amount: totalPrice });
+
+      if (data.success) {
+        setOrderData({
+          orderId: data.order_id,
+          amount: data.amount,
+          currency: data.currency,
+          keyId: data.key,
+        });
+        setShowRazorpay(true);
+      } else {
+        showAlert('Error ❌', 'Could not create payment order. Please try again.');
+      }
     } catch (error) {
       showAlert(
-        'Payment Failed ❌',
-        error.message || 'Transaction could not be processed. Please try again.',
-        [{ text: 'Retry', style: 'destructive' }, { text: 'Cancel', onPress: () => navigation.goBack() }]
+        'Payment Error ❌',
+        error.message || 'Failed to initiate payment. Check your internet connection.',
+        [{ text: 'OK' }]
       );
     } finally {
       setLoading(false);
     }
+  };
+
+  // Step 2: Razorpay payment successful — verify on backend
+  const handlePaymentSuccess = async (paymentData) => {
+    setShowRazorpay(false);
+    setLoading(true);
+
+    try {
+      const verifyResult = await verifyRazorpayPayment({
+        razorpay_order_id: paymentData.razorpay_order_id,
+        razorpay_payment_id: paymentData.razorpay_payment_id,
+        razorpay_signature: paymentData.razorpay_signature,
+      });
+
+      if (verifyResult.success) {
+        // Payment verified! Navigate to confirmation
+        navigation.replace('BookingConfirmation', {
+          movie,
+          seats,
+          totalPrice,
+          transactionId: verifyResult.transactionId,
+          paymentMethod: 'Razorpay',
+        });
+      } else {
+        showAlert(
+          'Verification Failed ❌',
+          'Payment was received but verification failed. Please contact support.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+      }
+    } catch (error) {
+      showAlert(
+        'Verification Error ❌',
+        error.message || 'Could not verify payment. Please contact support with your payment ID.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 3: Payment failed or cancelled
+  const handlePaymentFailure = (error) => {
+    setShowRazorpay(false);
+    setLoading(false);
+
+    if (error === 'Payment cancelled by user') {
+      // User just dismissed, no alert needed
+      return;
+    }
+
+    showAlert(
+      'Payment Failed ❌',
+      error || 'Transaction could not be processed. Please try again.',
+      [
+        { text: 'Retry', onPress: handlePay },
+        { text: 'Cancel', style: 'cancel', onPress: () => navigation.goBack() },
+      ]
+    );
   };
 
   return (
@@ -89,7 +132,7 @@ export default function PaymentScreen({ navigation, route }) {
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingCard}>
             <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingTitle}>Processing Payment...</Text>
+            <Text style={styles.loadingTitle}>Processing...</Text>
             <Text style={styles.loadingSubtitle}>
               Please do not press back or close the app
             </Text>
@@ -100,6 +143,57 @@ export default function PaymentScreen({ navigation, route }) {
             </View>
           </View>
         </View>
+      )}
+
+      {/* Razorpay Checkout */}
+      {Platform.OS === 'web' ? (
+        // On web: Razorpay opens its own popup, no Modal needed
+        showRazorpay && orderData && (
+          <RazorpayCheckout
+            orderId={orderData.orderId}
+            amount={orderData.amount}
+            currency={orderData.currency}
+            keyId={orderData.keyId}
+            userInfo={{}}
+            onSuccess={handlePaymentSuccess}
+            onFailure={handlePaymentFailure}
+          />
+        )
+      ) : (
+        // On native (Android/iOS): Use Modal with WebView
+        <Modal
+          visible={showRazorpay}
+          animationType="slide"
+          onRequestClose={() => {
+            setShowRazorpay(false);
+          }}
+        >
+          <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowRazorpay(false);
+                }}
+                style={styles.modalCloseBtn}
+              >
+                <Text style={styles.modalCloseBtnText}>✕ Close</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Razorpay Payment</Text>
+              <View style={{ width: 70 }} />
+            </View>
+            {orderData && (
+              <RazorpayCheckout
+                orderId={orderData.orderId}
+                amount={orderData.amount}
+                currency={orderData.currency}
+                keyId={orderData.keyId}
+                userInfo={{}}
+                onSuccess={handlePaymentSuccess}
+                onFailure={handlePaymentFailure}
+              />
+            )}
+          </SafeAreaView>
+        </Modal>
       )}
 
       <ScrollView
@@ -128,53 +222,34 @@ export default function PaymentScreen({ navigation, route }) {
           </View>
         </View>
 
-        {/* UPI App Selector */}
+        {/* Razorpay Payment Info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pay With UPI</Text>
-          <View style={styles.upiAppsGrid}>
-            {UPI_APPS.map((app) => (
-              <TouchableOpacity
-                key={app.name}
-                onPress={() => {
-                  setSelectedApp(app.name);
-                  setUpiId('');
-                }}
-                style={[
-                  styles.upiApp,
-                  selectedApp === app.name && styles.upiAppSelected,
-                ]}
-              >
-                <Text style={styles.upiAppEmoji}>{app.emoji}</Text>
-                <Text style={[
-                  styles.upiAppName,
-                  selectedApp === app.name && styles.upiAppNameSelected,
-                ]}>{app.name}</Text>
-              </TouchableOpacity>
-            ))}
+          <Text style={styles.sectionTitle}>Payment Method</Text>
+          <View style={styles.razorpayCard}>
+            <View style={styles.razorpayHeader}>
+              <Text style={styles.razorpayLogo}>💳</Text>
+              <View style={styles.razorpayInfo}>
+                <Text style={styles.razorpayTitle}>Razorpay Secure Checkout</Text>
+                <Text style={styles.razorpayDesc}>
+                  UPI • Cards • Net Banking • Wallets
+                </Text>
+              </View>
+            </View>
+            <View style={styles.razorpayMethods}>
+              {['💳 Cards', '📱 UPI', '🏦 NetBanking', '💰 Wallets'].map((method) => (
+                <View key={method} style={styles.methodChip}>
+                  <Text style={styles.methodChipText}>{method}</Text>
+                </View>
+              ))}
+            </View>
           </View>
         </View>
 
-        {/* UPI ID Input */}
-        <View style={styles.section}>
-          <Input
-            label="UPI ID"
-            placeholder={
-              selectedApp
-                ? UPI_APPS.find((a) => a.name === selectedApp)?.hint
-                : 'yourname@upi'
-            }
-            value={upiId}
-            onChangeText={(v) => { setUpiId(v); setUpiError(''); }}
-            keyboardType="email-address"
-            error={upiError}
-          />
-        </View>
-
-        {/* Pay Securely note */}
+        {/* Secure Note */}
         <View style={styles.secureNote}>
           <Text style={styles.secureNoteIcon}>🔐</Text>
           <Text style={styles.secureNoteText}>
-            Your payment is encrypted and secured. We never store your UPI credentials.
+            Your payment is processed securely by Razorpay. We never store your card or bank details.
           </Text>
         </View>
 
@@ -189,6 +264,17 @@ export default function PaymentScreen({ navigation, route }) {
         <Text style={styles.disclaimer}>
           By proceeding, you agree to our Terms of Service and Refund Policy.
         </Text>
+
+        {/* Test Mode Info */}
+        <View style={styles.testModeCard}>
+          <Text style={styles.testModeTitle}>🧪 Test Mode</Text>
+          <Text style={styles.testModeText}>
+            Use these test credentials:{'\n'}
+            Card: 4111 1111 1111 1111{'\n'}
+            Expiry: Any future date{'\n'}
+            CVV: Any 3 digits | OTP: Any number
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -268,6 +354,37 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
 
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.base,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  modalCloseBtn: {
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: RADIUS.md,
+    backgroundColor: `${COLORS.error}22`,
+  },
+  modalCloseBtnText: {
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.error,
+    fontWeight: FONTS.weights.semibold,
+  },
+  modalTitle: {
+    fontSize: FONTS.sizes.base,
+    fontWeight: FONTS.weights.bold,
+    color: COLORS.text,
+  },
+
   content: {
     padding: SPACING.base,
     paddingBottom: SPACING.xxxl,
@@ -326,33 +443,54 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
 
-  upiAppsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-  },
-  upiApp: {
-    flex: 1,
-    minWidth: 70,
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
+  // Razorpay Card
+  razorpayCard: {
     backgroundColor: COLORS.card,
-    gap: 4,
-  },
-  upiAppSelected: {
+    borderRadius: RADIUS.xl,
+    padding: SPACING.base,
+    borderWidth: 1.5,
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryGlow,
+    gap: SPACING.md,
   },
-  upiAppEmoji: { fontSize: 24 },
-  upiAppName: {
+  razorpayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  razorpayLogo: {
+    fontSize: 36,
+  },
+  razorpayInfo: {
+    flex: 1,
+  },
+  razorpayTitle: {
+    fontSize: FONTS.sizes.base,
+    fontWeight: FONTS.weights.bold,
+    color: COLORS.text,
+  },
+  razorpayDesc: {
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
-    fontWeight: FONTS.weights.semibold,
+    marginTop: 2,
   },
-  upiAppNameSelected: { color: COLORS.primary },
+  razorpayMethods: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
+  },
+  methodChip: {
+    backgroundColor: `${COLORS.primary}15`,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: `${COLORS.primary}33`,
+  },
+  methodChipText: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.primary,
+    fontWeight: FONTS.weights.medium,
+  },
 
   secureNote: {
     flexDirection: 'row',
@@ -379,5 +517,26 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     textAlign: 'center',
     lineHeight: 16,
+    marginBottom: SPACING.xl,
+  },
+
+  // Test mode info card
+  testModeCard: {
+    backgroundColor: `${COLORS.warning}15`,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.base,
+    borderWidth: 1,
+    borderColor: `${COLORS.warning}44`,
+  },
+  testModeTitle: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: FONTS.weights.bold,
+    color: COLORS.warning,
+    marginBottom: SPACING.xs,
+  },
+  testModeText: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
   },
 });
