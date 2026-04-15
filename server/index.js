@@ -5,8 +5,8 @@ require('dotenv').config();
 // Import Routes
 const authRoutes = require('./routes/authRoutes');
 const movieRoutes = require('./routes/movieRoutes');
-const bookingRoutes = require('./routes/bookingRoutes'); // <--- Import this
-const paymentRoutes = require('./routes/paymentRoutes'); // <--- Import this
+const bookingRoutes = require('./routes/bookingRoutes'); 
+const paymentRoutes = require('./routes/paymentRoutes'); 
 
 const app = express();
 
@@ -20,9 +20,8 @@ app.use(cors());
 app.use('/api/auth', authRoutes);
 app.use('/api/movies', movieRoutes);
 
-app.use('/api/bookings', bookingRoutes); // <--- Add this line
-
-app.use('/api/payment', paymentRoutes); // <--- Add this
+app.use('/api/bookings', bookingRoutes); 
+app.use('/api/payment', paymentRoutes); 
 
 const PORT = 5000;
 app.listen(PORT, () => {

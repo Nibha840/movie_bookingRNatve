@@ -17,3 +17,6 @@ logs/
 # 5. OS Generated Files (Junk files from Mac/Windows)
 .DS_Store
 Thumbs.db
+
+
+.expo/

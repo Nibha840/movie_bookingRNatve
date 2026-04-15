@@ -60,6 +60,7 @@ Get movies: GET /api/movies
 Process payment: POST /api/payment/process
 Create booking: POST /api/bookings/book (use userId and transactionId from above)
 Get bookings: GET /api/bookings/user/1
+/////////////////////////////////
 
 run    npm start
 
