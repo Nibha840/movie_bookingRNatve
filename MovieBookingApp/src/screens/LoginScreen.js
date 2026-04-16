@@ -133,6 +133,7 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.xxxl,
     paddingBottom: SPACING.xxl,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   header: { alignItems: 'center', marginBottom: SPACING.xxxl },
   logoContainer: {
@@ -166,6 +167,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     marginBottom: SPACING.xl,
+    width: '100%',
+    maxWidth: 460,
   },
   cardTitle: {
     fontSize: FONTS.sizes.xxl,
@@ -185,6 +188,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
+    maxWidth: 460,
   },
   footerText: { color: COLORS.textSecondary, fontSize: FONTS.sizes.base },
   footerLink: {
@@ -198,6 +203,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: SPACING.lg,
     marginTop: SPACING.xxl,
+    width: '100%',
+    maxWidth: 460,
   },
   decorEmoji: { fontSize: 24, opacity: 0.4 },
 });

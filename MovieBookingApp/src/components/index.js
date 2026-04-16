@@ -8,11 +8,13 @@ import {
   StyleSheet,
   TextInput,
   Image,
-  Dimensions,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
 
-const { width } = Dimensions.get('window');
+// Max content width for web layout
+const MAX_CONTENT_WIDTH = 1400;
 
 // ─── BUTTON ──────────────────────────────────────────────────────────────────
 export const Button = ({
@@ -145,8 +147,15 @@ export const Badge = ({ label, color = COLORS.primary }) => (
 );
 
 // ─── MOVIE CARD ──────────────────────────────────────────────────────────────
-export const MovieCard = ({ movie, onPress }) => {
-  const cardWidth = (width - SPACING.base * 3) / 2;
+export const MovieCard = ({ movie, onPress, numColumns = 2 }) => {
+  const { width: windowWidth } = useWindowDimensions();
+
+  // On web, cap content area to MAX_CONTENT_WIDTH for a cleaner look
+  const isWeb = Platform.OS === 'web';
+  const contentWidth = isWeb ? Math.min(windowWidth, MAX_CONTENT_WIDTH) : windowWidth;
+  // Calculate card width: total width minus padding and gaps between cards
+  const totalGap = SPACING.base * (numColumns + 1); // padding + gaps
+  const cardWidth = (contentWidth - totalGap) / numColumns;
 
   return (
     <TouchableOpacity

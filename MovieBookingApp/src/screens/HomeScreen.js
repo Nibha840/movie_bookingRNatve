@@ -1,5 +1,5 @@
 // src/screens/HomeScreen.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,17 @@ import {
   RefreshControl,
   StatusBar,
   TextInput,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { getMovies } from '../services/api';
 import { MovieCard, LoadingScreen, ErrorMessage } from '../components';
 import { COLORS, FONTS, SPACING, RADIUS } from '../utils/theme';
+
+// Max width for content on web/desktop
+const MAX_CONTENT_WIDTH = 1400;
 
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
@@ -23,6 +28,16 @@ export default function HomeScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
+  const { width: windowWidth } = useWindowDimensions();
+
+  // Calculate responsive columns based on screen width
+  const numColumns = useMemo(() => {
+    if (Platform.OS !== 'web') return 2;
+    if (windowWidth > 1400) return 5;
+    if (windowWidth > 1100) return 4;
+    if (windowWidth > 800) return 3;
+    return 2;
+  }, [windowWidth]);
 
   const fetchMovies = useCallback(async () => {
     try {
@@ -83,61 +98,8 @@ export default function HomeScreen({ navigation }) {
     <MovieCard
       movie={item}
       onPress={() => navigation.navigate('MovieDetails', { movie: item })}
+      numColumns={numColumns}
     />
-  );
-
-  const renderHeader = () => (
-    <View>
-      {/* Greeting */}
-      <View style={styles.greeting}>
-        <View>
-          <Text style={styles.greetingText}>{getGreeting()},</Text>
-          <Text style={styles.userName}>
-            {user?.name || user?.email?.split('@')[0] || 'Movie Fan'} 👋
-          </Text>
-        </View>
-        <View style={styles.greetingBadge}>
-          <Text style={styles.greetingBadgeText}>🎬 Now Showing</Text>
-        </View>
-      </View>
-
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <Text style={styles.searchIcon}>🔍</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search movies or genres..."
-          placeholderTextColor={COLORS.textMuted}
-          value={search}
-          onChangeText={setSearch}
-          selectionColor={COLORS.primary}
-        />
-      </View>
-
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{movies.length}</Text>
-          <Text style={styles.statLabel}>Movies</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>
-            {[...new Set(movies.map((m) => m.genre).filter(Boolean))].length}
-          </Text>
-          <Text style={styles.statLabel}>Genres</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>₹250</Text>
-          <Text style={styles.statLabel}>Per Seat</Text>
-        </View>
-      </View>
-
-      <Text style={styles.sectionTitle}>
-        {search ? `Results (${filtered.length})` : 'All Movies'}
-      </Text>
-    </View>
   );
 
   const renderEmpty = () => (
@@ -150,36 +112,124 @@ export default function HomeScreen({ navigation }) {
     </View>
   );
 
+  // Web-specific wrapper to center and constrain content width
+  const isWeb = Platform.OS === 'web';
+  const contentMaxWidth = isWeb ? MAX_CONTENT_WIDTH : undefined;
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => String(item._id || item.id)}
-        renderItem={renderItem}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.list}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmpty}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+      <View style={[styles.outerContainer, isWeb && styles.webOuterContainer]}>
+        <View style={[styles.innerContainer, contentMaxWidth && { maxWidth: contentMaxWidth }]}>
+
+          {/* Header section - rendered outside FlatList to prevent focus loss */}
+          <View style={styles.headerSection}>
+            {/* Greeting */}
+            <View style={styles.greeting}>
+              <View>
+                <Text style={styles.greetingText}>{getGreeting()},</Text>
+                <Text style={styles.userName}>
+                  {user?.name || user?.email?.split('@')[0] || 'Movie Fan'} 👋
+                </Text>
+              </View>
+              <View style={styles.greetingBadge}>
+                <Text style={styles.greetingBadgeText}>🎬 Now Showing</Text>
+              </View>
+            </View>
+
+            {/* Search - outside FlatList so it never loses focus */}
+            <View style={styles.searchContainer}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search movies or genres..."
+                placeholderTextColor={COLORS.textMuted}
+                value={search}
+                onChangeText={setSearch}
+                selectionColor={COLORS.primary}
+                autoCorrect={false}
+              />
+              {search.length > 0 && (
+                <Text
+                  style={styles.searchClear}
+                  onPress={() => setSearch('')}
+                >
+                  ✕
+                </Text>
+              )}
+            </View>
+
+            {/* Stats */}
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{movies.length}</Text>
+                <Text style={styles.statLabel}>Movies</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  {[...new Set(movies.map((m) => m.genre).filter(Boolean))].length}
+                </Text>
+                <Text style={styles.statLabel}>Genres</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>₹250</Text>
+                <Text style={styles.statLabel}>Per Seat</Text>
+              </View>
+            </View>
+
+            <Text style={styles.sectionTitle}>
+              {search ? `Results (${filtered.length})` : 'All Movies'}
+            </Text>
+          </View>
+
+          {/* Movie grid */}
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => String(item._id || item.id)}
+            renderItem={renderItem}
+            key={`columns-${numColumns}`}
+            numColumns={numColumns}
+            columnWrapperStyle={styles.row}
+            contentContainerStyle={styles.list}
+            ListEmptyComponent={renderEmpty}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={COLORS.primary}
+                colors={[COLORS.primary]}
+              />
+            }
+            showsVerticalScrollIndicator={false}
           />
-        }
-        showsVerticalScrollIndicator={false}
-      />
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
-  list: {
+
+  outerContainer: {
+    flex: 1,
+  },
+  webOuterContainer: {
+    alignItems: 'center',
+  },
+  innerContainer: {
+    flex: 1,
+    width: '100%',
     paddingHorizontal: SPACING.base,
+  },
+
+  headerSection: {
+    paddingBottom: SPACING.sm,
+  },
+
+  list: {
     paddingBottom: SPACING.xxxl,
   },
 
@@ -229,6 +279,13 @@ const styles = StyleSheet.create({
     flex: 1,
     color: COLORS.text,
     fontSize: FONTS.sizes.base,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
+  },
+  searchClear: {
+    fontSize: 16,
+    color: COLORS.textMuted,
+    paddingLeft: SPACING.sm,
+    paddingVertical: SPACING.xs,
   },
 
   statsRow: {
@@ -266,7 +323,10 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.base,
   },
 
-  row: { justifyContent: 'space-between' },
+  row: {
+    justifyContent: 'flex-start',
+    gap: SPACING.base,
+  },
 
   emptyContainer: {
     alignItems: 'center',

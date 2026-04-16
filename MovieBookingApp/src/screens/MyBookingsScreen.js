@@ -16,8 +16,20 @@ import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
 import { formatCurrency, formatDate } from '../utils/helpers';
 
 const BookingCard = ({ booking }) => {
-  const seats = Array.isArray(booking.seats) ? booking.seats : [];
-  const movie = booking.movie || booking.showtime?.movie || {};
+  // seats comes as array from backend now, but handle both formats for safety
+  const seats = Array.isArray(booking.seats)
+    ? booking.seats
+    : typeof booking.seats === 'string'
+      ? booking.seats.split(',').map(s => s.trim())
+      : [];
+
+  // Support both flat fields (from our API) and nested (from local/fallback)
+  const movieTitle = booking.movieTitle || booking.movie?.title || 'Movie';
+  const genre = booking.genre || booking.movie?.genre || 'Cinema';
+  const totalPrice = booking.totalPrice || booking.total_amount || 0;
+  const transactionId = booking.transactionId || booking.transaction_id || 'N/A';
+  const createdAt = booking.createdAt || booking.booking_date || null;
+  const status = booking.status || 'confirmed';
 
   return (
     <View style={[styles.card, SHADOWS.card]}>
@@ -28,15 +40,17 @@ const BookingCard = ({ booking }) => {
         </View>
         <View style={styles.cardMovieInfo}>
           <Text style={styles.cardMovieTitle} numberOfLines={1}>
-            {movie.title || booking.movieTitle || 'Movie'}
+            {movieTitle}
           </Text>
           <Text style={styles.cardMovieGenre}>
-            {movie.genre || booking.genre || 'Cinema'}
+            {genre}
           </Text>
         </View>
         <View style={styles.statusBadge}>
           <View style={styles.statusDot} />
-          <Text style={styles.statusText}>Confirmed</Text>
+          <Text style={styles.statusText}>
+            {status === 'confirmed' ? 'Confirmed' : status}
+          </Text>
         </View>
       </View>
 
@@ -47,12 +61,12 @@ const BookingCard = ({ booking }) => {
       <View style={styles.cardDetails}>
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>SEATS</Text>
-          <Text style={styles.detailValue}>{seats.join(', ') || 'N/A'}</Text>
+          <Text style={styles.detailValue}>{seats.length > 0 ? seats.join(', ') : 'N/A'}</Text>
         </View>
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>AMOUNT</Text>
           <Text style={[styles.detailValue, styles.amount]}>
-            {formatCurrency(booking.totalPrice || 0)}
+            {formatCurrency(totalPrice)}
           </Text>
         </View>
       </View>
@@ -61,7 +75,7 @@ const BookingCard = ({ booking }) => {
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>BOOKED ON</Text>
           <Text style={styles.detailValue}>
-            {formatDate(booking.createdAt)}
+            {formatDate(createdAt)}
           </Text>
         </View>
       </View>
@@ -70,7 +84,7 @@ const BookingCard = ({ booking }) => {
       <View style={styles.txnRow}>
         <Text style={styles.txnLabel}>TXN ID: </Text>
         <Text style={styles.txnValue} numberOfLines={1}>
-          {booking.transactionId || booking._id || 'N/A'}
+          {transactionId}
         </Text>
       </View>
     </View>

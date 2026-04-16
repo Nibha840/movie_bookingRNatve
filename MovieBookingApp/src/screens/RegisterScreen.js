@@ -181,14 +181,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.base,
     paddingTop: SPACING.base,
     paddingBottom: SPACING.xxl,
+    alignItems: 'center',
   },
-  backBtn: { marginBottom: SPACING.xl },
+  backBtn: { marginBottom: SPACING.xl, width: '100%', maxWidth: 500, alignSelf: 'center' },
   backText: {
     color: COLORS.primary,
     fontSize: FONTS.sizes.base,
     fontWeight: FONTS.weights.semibold,
   },
-  header: { marginBottom: SPACING.xl },
+  header: { marginBottom: SPACING.xl, width: '100%', maxWidth: 500 },
   title: {
     fontSize: FONTS.sizes.display,
     fontWeight: FONTS.weights.black,
@@ -207,6 +208,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     marginBottom: SPACING.xl,
+    width: '100%',
+    maxWidth: 500,
   },
 
   roleSection: { marginBottom: SPACING.base },
@@ -247,6 +250,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
+    maxWidth: 500,
   },
   footerText: { color: COLORS.textSecondary, fontSize: FONTS.sizes.base },
   footerLink: {

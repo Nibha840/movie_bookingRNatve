@@ -6,7 +6,14 @@ import { COLORS, FONTS, SPACING } from '../utils/theme';
 // ─── WEB VERSION ─────────────────────────────────────────────────────────────
 // On web, we load Razorpay's checkout.js and open their popup directly
 function RazorpayCheckoutWeb({ orderId, amount, currency, keyId, userInfo, onSuccess, onFailure }) {
+  const hasOpenedRef = useRef(false);
+  const rzpInstanceRef = useRef(null);
+
   useEffect(() => {
+    // Prevent double-opening (e.g., on React re-render)
+    if (hasOpenedRef.current) return;
+    hasOpenedRef.current = true;
+
     // Load Razorpay script dynamically
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -30,6 +37,7 @@ function RazorpayCheckoutWeb({ orderId, amount, currency, keyId, userInfo, onSuc
             color: '#6C63FF',
           },
           handler: function (response) {
+            console.log('✅ Razorpay payment success callback:', response.razorpay_payment_id);
             onSuccess && onSuccess({
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
@@ -38,6 +46,7 @@ function RazorpayCheckoutWeb({ orderId, amount, currency, keyId, userInfo, onSuc
           },
           modal: {
             ondismiss: function () {
+              console.log('ℹ️ Razorpay modal dismissed by user');
               onFailure && onFailure('Payment cancelled by user');
             },
             escape: true,
@@ -46,8 +55,10 @@ function RazorpayCheckoutWeb({ orderId, amount, currency, keyId, userInfo, onSuc
         };
 
         const rzp = new window.Razorpay(options);
+        rzpInstanceRef.current = rzp;
 
         rzp.on('payment.failed', function (response) {
+          console.error('❌ Razorpay payment failed:', response.error?.description);
           onFailure && onFailure(
             response.error?.description || 'Payment failed'
           );
@@ -68,7 +79,9 @@ function RazorpayCheckoutWeb({ orderId, amount, currency, keyId, userInfo, onSuc
     document.body.appendChild(script);
 
     return () => {
-      // Cleanup script on unmount
+      // Cleanup on unmount
+      hasOpenedRef.current = false;
+      rzpInstanceRef.current = null;
       if (document.body.contains(script)) {
         document.body.removeChild(script);
       }

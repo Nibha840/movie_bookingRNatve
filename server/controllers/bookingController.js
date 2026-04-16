@@ -95,10 +95,46 @@ exports.createBooking = (req, res) => {
 
 exports.getUserBookings = (req, res) => {
     const { userId } = req.params;
-    const sql = "SELECT * FROM bookings WHERE user_id = ?";
+
+    // JOIN with movies table to get movie title, genre, poster
+    // showtime_id stores the movie ID in our simplified schema
+    const sql = `
+        SELECT 
+            b.id,
+            b.user_id,
+            b.showtime_id,
+            b.seats,
+            b.total_amount,
+            b.booking_date,
+            b.transaction_id,
+            m.title AS movie_title,
+            m.genre AS movie_genre,
+            m.poster_url AS movie_poster
+        FROM bookings b
+        LEFT JOIN movies m ON b.showtime_id = m.id
+        WHERE b.user_id = ?
+        ORDER BY b.booking_date DESC
+    `;
     
     db.query(sql, [userId], (err, results) => {
-        if (err) return res.status(500).json({ error: "Database error" });
-        res.json(results);
+        if (err) {
+            console.error('❌ Get bookings error:', err.message);
+            return res.status(500).json({ error: "Database error" });
+        }
+
+        // Map database fields to frontend-expected fields
+        const bookings = results.map(row => ({
+            id: row.id,
+            movieTitle: row.movie_title || 'Movie',
+            genre: row.movie_genre || 'Cinema',
+            posterUrl: row.movie_poster || null,
+            seats: row.seats ? row.seats.split(',').map(s => s.trim()) : [],
+            totalPrice: row.total_amount || 0,
+            transactionId: row.transaction_id || null,
+            createdAt: row.booking_date || null,
+            status: 'confirmed',
+        }));
+
+        res.json(bookings);
     });
 };
